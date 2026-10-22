@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Bases de datos locales y copias de seguridad (contienen partidas, no versionar)
+*.sqlite3
+*.db
+data/backups/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+.vite/
+
+# ROMs, BIOS y saves — NUNCA versionar (aviso legal)
+*.gba
+*.gb
+*.agb
+*.sav
+*.state
+*.ssave
+roms/
+
+# Entorno e IDE
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.log
+.DS_Store
