@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pbm://protocol/v1",
+  "title": "Protocolo PBM v1 — mensajes JSON-line entre el script Lua de mGBA y el backend",
+  "description": "Cada mensaje es una línea JSON UTF-8 terminada en \\n. Todos los mensajes tienen 'v' (versión, siempre 1) y 't' (tipo). Los mensajes del puente incluyen 'seq' creciente para detectar pérdidas/reordenaciones.",
+  "type": "object",
+  "oneOf": [
+    {
+      "description": "Handshake inicial enviado por el puente Lua al conectar.",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "hello"},
+        "mgba_version": {"type": "string"},
+        "game_code": {"type": ["string", "null"]},
+        "game_title": {"type": ["string", "null"]},
+        "rom_loaded": {"type": "boolean"}
+      },
+      "required": ["v", "t", "mgba_version", "rom_loaded"]
+    },
+    {
+      "description": "Estado periódico del emulador (tick). game_time_ms y frame son contadores reales leídos del core; flags indica si hay ROM cargada y si está pausada.",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "status"},
+        "seq": {"type": "integer", "minimum": 0},
+        "ts": {"type": "number"},
+        "rom_loaded": {"type": "boolean"},
+        "paused": {"type": "boolean"},
+        "frame": {"type": "integer"},
+        "buttons_held": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["v", "t", "seq", "rom_loaded"]
+    },
+    {
+      "description": "Lectura de memoria confirmada: el puente solo responde 'memread' con valores realmente leídos. address es offset en la región dada (IWRAM/EWRAM/ROM/PALETTE/VRAM/OAM/SRAM/FLASH).",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "memread"},
+        "req": {"type": "integer"},
+        "region": {"type": "string", "enum": ["IWRAM", "EWRAM", "ROM", "PALETTE", "VRAM", "OAM", "SRAM", "FLASH"]},
+        "address": {"type": "integer"},
+        "width": {"type": "integer", "enum": [1, 2, 4]},
+        "value": {"type": ["integer", "null"]},
+        "error": {"type": ["string", "null"]}
+      },
+      "required": ["v", "t", "req", "region", "address", "width"]
+    },
+    {
+      "description": "Orden del backend al puente. action: ping|status_on|press_button|release_button|hold_frame|emergency_stop|mem_read|set_speed",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "cmd"},
+        "id": {"type": "integer"},
+        "action": {"type": "string", "enum": ["ping", "status_on", "press_button", "release_button", "hold_frame", "emergency_stop", "mem_read", "set_speed"]},
+        "button": {"type": "string", "enum": ["A", "B", "SELECT", "START", "RIGHT", "LEFT", "UP", "DOWN", "R", "L"]},
+        "frames": {"type": "integer", "minimum": 0, "maximum": 600},
+        "region": {"type": "string"},
+        "address": {"type": "integer"},
+        "width": {"type": "integer"},
+        "hz": {"type": "integer"}
+      },
+      "required": ["v", "t", "id", "action"]
+    },
+    {
+      "description": "Respuesta a un cmd identificado por 'id'. ok=false implica que la acción NO se realizó (p. ej. parada de emergencia activa o sin ROM).",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "ack"},
+        "id": {"type": "integer"},
+        "ok": {"type": "boolean"},
+        "reason": {"type": ["string", "null"]}
+      },
+      "required": ["v", "t", "id", "ok"]
+    },
+    {
+      "description": "Evento observado por el puente (por ahora solo cambio de botón físico detectado por polling de keyboard — base para detección de entrada manual).",
+      "properties": {
+        "v": {"const": 1},
+        "t": {"const": "event"},
+        "seq": {"type": "integer"},
+        "kind": {"type": "string", "enum": ["manual_input", "rom_loaded", "rom_unloaded", "paused", "resumed"]},
+        "data": {"type": "object"}
+      },
+      "required": ["v", "t", "seq", "kind"]
+    }
+  ]
+}
